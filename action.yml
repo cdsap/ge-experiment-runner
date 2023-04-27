@@ -31,7 +31,7 @@ runs:
     - uses: actions/setup-java@v3
       with:
         distribution: zulu
-        java-version: 11.0.4
+        java-version: 17
     - uses: sdkman/sdkman-action@master
       id: sdkman
       with:
