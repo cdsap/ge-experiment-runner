@@ -14,7 +14,7 @@ inputs:
     default: 5
   class:
     description: "Class to apply the abi change"
-    required: true
+    required: false
   variant:
     description: "variant of the experiment, represents the branch"
     required: true
@@ -24,14 +24,22 @@ inputs:
   api-key:
     description: ""
     required: true
+  repository:
+    required: true
+  jdk:
+    required: false
+    default: 17
 runs:
   using: 'composite'
   steps:
     - uses: actions/checkout@v3
+      with:
+        repository: ${{ inputs.repository }}
+        ref: ${{ inputs.variant }}
     - uses: actions/setup-java@v3
       with:
         distribution: zulu
-        java-version: 17
+        java-version: $${ inputs.jdk }}
     - uses: sdkman/sdkman-action@master
       id: sdkman
       with:
@@ -40,11 +48,15 @@ runs:
     - name: Execute Gradle build
       id : geapix
       run: |
-           git fetch origin   
-           git checkout ${{inputs.variant}}
+           
            unzip  ${{ steps.sdkman.outputs.file }}
-           echo $'assemble { \n title= "assemble" \n tasks = [${{ inputs.task }}] \n cleanup-tasks = ["clean"] \n apply-abi-change-to = [${{ inputs.class }}] \n gradle-args = ["-Dscan.tag.${{ inputs.variant }}", "-Dscan.tag.experiment", "-Dscan.tag.${{inputs.experiment-id}}"] \n}' >scenario
-           gradle-profiler-0.19.0/bin/gradle-profiler --benchmark --scenario-file scenario assemble --warmups ${{ inputs.warmups }} --iterations ${{ inputs.iterations }}
+           if [ -z "${{ inputs.class }}" ] then
+               echo $'assemble { \n title= "assemble" \n tasks = [${{ inputs.task }}] \n cleanup-tasks = ["clean"] \n gradle-args = ["-Dscan.tag.${{ inputs.variant }}", "-Dscan.tag.experiment", "-Dscan.tag.${{inputs.experiment-id}}"] \n}' >scenario
+           else
+               echo $'assemble { \n title= "assemble" \n tasks = [${{ inputs.task }}] \n cleanup-tasks = ["clean"] \n apply-abi-change-to = [${{ inputs.class }}] \n gradle-args = ["-Dscan.tag.${{ inputs.variant }}", "-Dscan.tag.experiment", "-Dscan.tag.${{inputs.experiment-id}}"] \n}' >scenario
+           fi
+
+          gradle-profiler-0.19.0/bin/gradle-profiler --benchmark --scenario-file scenario assemble --warmups ${{ inputs.warmups }} --iterations ${{ inputs.iterations }}
 
            TABLE_OUTPUT="<table><tr><td>Build</td><td></td></tr>"
            while read line
