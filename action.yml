@@ -50,8 +50,14 @@ runs:
       run: |
            
            unzip  ${{ steps.sdkman.outputs.file }}
-           git status
-           echo "gradle-profiler-0.19.0/bin/gradle-profiler --benchmark --scenario-file scenario assemble --warmups ${{ inputs.warmups }} --iterations ${{ inputs.iterations }}"
+           if [ -z "${{ inputs.class }}" ] then
+               echo $'assemble { \n title= "assemble" \n tasks = [${{ inputs.task }}] \n cleanup-tasks = ["clean"] \n gradle-args = ["-Dscan.tag.${{ inputs.variant }}", "-Dscan.tag.experiment", "-Dscan.tag.${{inputs.experiment-id}}"] \n}' >scenario
+           else
+               echo $'assemble { \n title= "assemble" \n tasks = [${{ inputs.task }}] \n cleanup-tasks = ["clean"] \n apply-abi-change-to = [${{ inputs.class }}] \n gradle-args = ["-Dscan.tag.${{ inputs.variant }}", "-Dscan.tag.experiment", "-Dscan.tag.${{inputs.experiment-id}}"] \n}' >scenario
+           fi
+
+           gradle-profiler-0.19.0/bin/gradle-profiler --benchmark --scenario-file scenario assemble --warmups ${{ inputs.warmups }} --iterations ${{ inputs.iterations }}
+ 
 
            TABLE_OUTPUT="<table><tr><td>Build</td><td></td></tr>"
            while read line
